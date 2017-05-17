@@ -2,7 +2,9 @@
 #include "y.tab.h"
 
 static int lbl;
-int ex(nodeType *p) {
+extern FILE *outfile;
+
+int ex(nodeType *p,string var) {
 	int lbl1, lbl2;
 
 	if (!p) return 0;
@@ -10,124 +12,133 @@ int ex(nodeType *p) {
 	case typeCon:
 		switch(p->con.value.type) {
 		case typeInt:
-			printf("\tpush\t%d\n", p->con.value.i); 
+			fprintf(outfile,"\tpush\t%d\n", p->con.value.i); 
 			break;
 		case typeFlt:
-			printf("\tpush\t%f\n", p->con.value.f);
+			fprintf(outfile,"\tpush\t%f\n", p->con.value.f);
 			break;
 		case typeChar:
-			printf("\tpush\t%c\n", p->con.value.c); 
+			fprintf(outfile,"\tpush\t%c\n", p->con.value.c); 
 			break;
 		case typeBool:
-			printf("\tpush\t%d\n", p->con.value.b); 
+			fprintf(outfile,"\tpush\t%d\n", p->con.value.b); 
 			break;
 		}
 		break;
 	case typeId:
-		printf("\tpush\t%s\n", p->id.name);
+		fprintf(outfile,"\tpush\t%s\n", p->id.name);
 		break;
 	case typeOpr:
 		switch(p->opr.oper) {
 		case WHILE:
-			printf("L%03d:\n", lbl1 = lbl++);
-			ex(p->opr.op[0]);
-			printf("\tjz\tL%03d\n", lbl2 = lbl++);
-			ex(p->opr.op[1]);
-			printf("\tjmp\tL%03d\n", lbl1);
-			printf("L%03d:\n", lbl2);
+			fprintf(outfile,"L%03d:\n", lbl1 = lbl++);
+			ex(p->opr.op[0],"");
+			fprintf(outfile,"\tjz\tL%03d\n", lbl2 = lbl++);
+			ex(p->opr.op[1],"");
+			fprintf(outfile,"\tjmp\tL%03d\n", lbl1);
+			fprintf(outfile,"L%03d:\n", lbl2);
 			break;
 		case IF:
-			ex(p->opr.op[0]);
+			ex(p->opr.op[0],"");
 			if (p->opr.nops > 2) {
 				/* if else */
-				printf("\tjz\tL%03d\n", lbl1 = lbl++);
-				ex(p->opr.op[1]);
-				printf("\tjmp\tL%03d\n", lbl2 = lbl++);
-				printf("L%03d:\n", lbl1);
-				ex(p->opr.op[2]);
-				printf("L%03d:\n", lbl2);
+				fprintf(outfile,"\tjz\tL%03d\n", lbl1 = lbl++);
+				ex(p->opr.op[1],"");
+				fprintf(outfile,"\tjmp\tL%03d\n", lbl2 = lbl++);
+				fprintf(outfile,"L%03d:\n", lbl1);
+				ex(p->opr.op[2],"");
+				fprintf(outfile,"L%03d:\n", lbl2);
 			} else {
 				/* if */
-				printf("\tjz\tL%03d\n", lbl1 = lbl++);
-				ex(p->opr.op[1]);
-				printf("L%03d\n",lbl1);				
+				fprintf(outfile,"\tjz\tL%03d\n", lbl1 = lbl++);
+				ex(p->opr.op[1],"");
+				fprintf(outfile,"L%03d\n",lbl1);				
 			}
 			break;
 		case PRINT:
-			ex(p->opr.op[0]);
-			printf("\tprint\n");
+			ex(p->opr.op[0],"");
+			fprintf(outfile,"\tprint\n");
 			break;
 		case '=':
-			ex(p->opr.op[1]);
-			printf("\tpop\t%s\n", p->opr.op[0]->id.name);
+			ex(p->opr.op[1],"");
+			fprintf(outfile,"\tpop\t%s\n", p->opr.op[0]->id.name);
 			break;
 		case UMINUS:
-			ex(p->opr.op[0]);
-			printf("\tneg\n");
+			ex(p->opr.op[0],"");
+			fprintf(outfile,"\tneg\n");
 			break;
 		case '!':
-			ex(p->opr.op[0]);
-			printf("\tnot\n"); break;
+			ex(p->opr.op[0],"");
+			fprintf(outfile,"\tnot\n"); break;
 		case FOR:
 			//printf("lesa msh sh8ala");
-			ex(p->opr.op[0]);
-			ex(p->opr.op[1]);
-			printf("\tjz\tL%03d\n",lbl2 + 1 );
-			printf("L%03d:\n", lbl2);
-			ex(p->opr.op[3]);
-			ex(p->opr.op[1]);
-			printf("\tjnz\tL%03d\n",lbl2 );
-			printf("L%03d:\n",lbl2 + 1);
+			ex(p->opr.op[0],"");
+			ex(p->opr.op[1],"");
+			fprintf(outfile,"\tjz\tL%03d\n",lbl + 1 );
+			fprintf(outfile,"L%03d:\n", lbl);
+			ex(p->opr.op[3],"");
+			ex(p->opr.op[2],""); 
+			ex(p->opr.op[1],"");
+			fprintf(outfile,"\tjnz\tL%03d\n",lbl );
+			fprintf(outfile,"L%03d:\n",lbl + 1);
 			break;
 		case DO:
-			printf("L%03d:\n", lbl1 = lbl++);
-			ex(p->opr.op[0]);
-			ex(p->opr.op[1]);
-			printf("\tjz\tL%03d\n", lbl2 = lbl++);
-			printf("\tjmp\tL%03d\n", lbl1);
-			printf("L%03d:\n", lbl2);
+			fprintf(outfile,"L%03d:\n", lbl1 = lbl++);
+			ex(p->opr.op[0],"");
+			ex(p->opr.op[1],"");
+			fprintf(outfile,"\tjz\tL%03d\n", lbl2 = lbl++);
+			fprintf(outfile,"\tjmp\tL%03d\n", lbl1);
+			fprintf(outfile,"L%03d:\n", lbl2);
 			break;
 		case SWITCH:
-			printf("\tmov\t%d,W\n",p->opr.op[0]->con.value.i);
-			ex(p->opr.op[1]);
+			ex(p->opr.op[2],p->opr.op[0]->id.name);
 			break;
 		case CASE:
-			printf("inside CASE \n");
-			printf("\tmov\t%d,X\n",p->opr.op[0]->con.value.i);
-			printf("\txor\tX,W\n");
-			printf("\tjnz\tL%03d\n", lbl2 = lbl++);
-			ex(p->opr.op[1]);
-			printf("L%03d:\n", lbl2);
-			ex(p->opr.op[2]);
+			//fprintf(outfile,"\tmov\t",var,",switch_var\n");
+			fprintf(outfile,"\tmov\t%d,case_var\n",p->opr.op[0]->con.value.i);
+			fprintf(outfile,"\txor\tcase_var,switch_var\n");
+			fprintf(outfile,"\tjnz\tL%03d\n", lbl2 = lbl++);
+			ex(p->opr.op[1],"");
+			fprintf(outfile,"L%03d:\n", lbl2);
+			if(p->opr.op[2] != NULL)
+				ex(p->opr.op[2],var);
+			break;
+		case CASE2:
+			//fprintf(outfile,"\tmov\t",var,",switch_var\n");
+			fprintf(outfile,"\tmov\t%d,case_var\n",p->opr.op[0]->con.value.i);
+			fprintf(outfile,"\txor\tcase_var,switch_var\n");
+			fprintf(outfile,"\tjnz\tL%03d\n", lbl2 = lbl++);
+			ex(p->opr.op[1],"");
+			fprintf(outfile,"L%03d:\n", lbl2);
 			break;
 		default:
-			ex(p->opr.op[0]);
-			ex(p->opr.op[1]);
+			ex(p->opr.op[0],"");
+			ex(p->opr.op[1],"");
 			switch(p->opr.oper) {
 			case '+':
-			printf("\tadd\n"); break;
+			fprintf(outfile,"\tadd\n"); break;
 			case '-':
-			printf("\tsub\n"); break;
+			fprintf(outfile,"\tsub\n"); break;
 			case '*':
-			printf("\tmul\n"); break;
+			fprintf(outfile,"\tmul\n"); break;
 			case '/':
-			printf("\tdiv\n"); break;
+			fprintf(outfile,"\tdiv\n"); break;
 			case '<':
-			printf("\tcompLT\n"); break;
+			fprintf(outfile,"\tcompLT\n"); break;
 			case '>':
-			printf("\tcompGT\n"); break;
+			fprintf(outfile,"\tcompGT\n"); break;
 			case GE:
-			printf("\tcompGE\n"); break;
+			fprintf(outfile,"\tcompGE\n"); break;
 			case LE:
-			printf("\tcompLE\n"); break;
+			fprintf(outfile,"\tcompLE\n"); break;
 			case NE:
-			printf("\tcompNE\n"); break;
+			fprintf(outfile,"\tcompNE\n"); break;
 			case EQ:
-			printf("\tcompEQ\n"); break;
+			fprintf(outfile,"\tcompEQ\n"); break;
 			case AND:
-			printf("\tand\n"); break;
+			fprintf(outfile,"\tand\n"); break;
 			case OR:
-			printf("\tor\n"); break;
+			fprintf(outfile,"\tor\n"); break;
 			}
 		}
 	}

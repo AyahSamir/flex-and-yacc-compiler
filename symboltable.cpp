@@ -19,9 +19,10 @@ class symboltable
 {
 	/* data */
 	SymbTableNode *Nodes[SIZE];
+	
+public:
 	symboltable *Next;
 	symboltable *Prev;
-public:
 	symboltable(){
 		for(int i=0;i<SIZE;i++)
 			Nodes[i]=NULL;
@@ -97,7 +98,7 @@ public:
 			return temp;
 		}
 		else{
-			cout<<"Not Found "<<name<<endl;
+			cout<<"Not Found\n";
 			return NULL;
 		}
 	}

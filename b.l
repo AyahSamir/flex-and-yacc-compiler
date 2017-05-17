@@ -1,3 +1,6 @@
+
+
+%option nounput yylineno
 %{
 	#include <iostream>
 	#include <stdio.h>
@@ -10,12 +13,13 @@
 
 	#include "y.tab.h"
 
-	
+
 %}
 Digit           [0-9]
 Letter          [a-zA-Z]
 
 %%
+
 int|INT 						{ yylval.ivalue = 0; return INT; }
 float|FLOAT						{ yylval.ivalue = 1; return FLOAT; }
 bool|BOOL						{ yylval.ivalue = 2; return BOOL; }
@@ -24,6 +28,7 @@ print|PRINT 						return PRINT;
 break|BREAK						return BREAK;
 continue|CONTINUE					return CONTINUE;
 switch|SWITCH						return SWITCH;
+case|CASE 						return CASE;
 if|IF 							return IF;
 else|ELSE 						return ELSE;
 while|WHILE						return WHILE;
@@ -68,7 +73,7 @@ false|FALSE						{
 "=="							return EQ;	
 "!="							return NE;
 [ \t]+							; /*ignore white spaces*/
-[\n]							yylineno=yylineno+1;
+[\n]							yylineno++; 
 "&&"							return AND;
 "||"							return OR;
 .							printf("error\n");

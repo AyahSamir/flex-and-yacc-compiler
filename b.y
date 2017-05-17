@@ -1,6 +1,6 @@
 %{
 #include <cstdarg>
-#include <string.h>
+#include <vector>
 #include <iostream>
 #include "symboltable.cpp"
 #include "nodeType.h"
@@ -23,13 +23,23 @@ nodeType *id(int type,char* name, bool dec);
 nodeType *con(char t, conValue value);
 
 void freeNode(nodeType *p);
-int ex(nodeType *p);
+int ex(nodeType *p,string var);
+void newScope(symboltable *old);
 
 /* SymbolTable */
+vector<symboltable> sym_vec;
+int symtablecount = -1;
+
 symboltable sym;
+symboltable *curr_sym = &sym;
+bool newSymNeeded=false;
 
 void yyerror(const char *s);
-char* errmsg;
+void senderror(const char *s , const char*x);
+
+FILE *myfile;
+FILE *outfile;
+
 %}
 
 %union {
@@ -53,7 +63,8 @@ char* errmsg;
 %token BREAK 
 %token CONTINUE 
 %token SWITCH
-%token CASE 
+%token CASE
+%token CASE2  
 %token IF 
 %token ELSE
 %token WHILE
@@ -74,7 +85,7 @@ char* errmsg;
 %nonassoc '!'
 %nonassoc UMINUS
 
-%type <nPtr> stmt expr stmt_list stmt_case
+%type <nPtr> stmt expr stmt_list stmt_case b
 %type <ivalue> types
 
 %%
@@ -83,34 +94,35 @@ program:
 	;
 
 function:
-	function stmt 			{ ex($2); freeNode($2);}
+	function stmt 			{ ex($2,""); freeNode($2);}
 	| /* NULL */
 	;
 
+b: 
+	'{'				{ newSymNeeded = true; symtablecount++;}
+	;
+
 stmt:
-	';'				{ $$ = opr(1,';', 2, NULL, NULL); }
-	| PRINT expr ';'		{ $$ = opr(1,PRINT, 1, $2); }
-	| types ID '=' expr ';'		{ $$ = opr(1,'=', 2 , id($1, $2, true), $4); }
-	| CONST types ID '=' expr ';'	{ $$ = opr(1,'=', 2 , id($2, $3, true), $5); }
-	| types ID ';'			{ $$ = id($1, $2, false); } 
-	| ID '=' expr ';'		{ $$ = opr(1,'=', 2 , id(-1,$1,true), $3); }
-
-	| WHILE '(' expr ')' stmt 	 { $$ = opr(1,WHILE, 2, $3, $5); }
-	| DO '{' stmt_list '}' WHILE '(' expr ')'   { $$ = opr(2,DO,2,$3,$7); }
-
-	| IF '(' expr ')' stmt %prec IFX { $$ = opr(1,IF, 2, $3, $5); }
-	| IF '(' expr ')' stmt ELSE stmt { $$ = opr(1,IF, 3, $3, $5, $7); }
-
-	| FOR '(' stmt  expr ';' stmt ')' '{' stmt '}' { $$ = opr(2,FOR,4,$3,$4,$6,$9); }
-
-	| SWITCH ID stmt_case 		{ $$ = opr(1,SWITCH , 2, $2, $3); }	
-
-	| '{' stmt_list '}'		{ $$ = $2; }
+	';'							{ $$ = opr(1,';', 2, NULL, NULL); }
+	| PRINT expr ';'					{ $$ = opr(1,PRINT, 1, $2); }
+	| types ID '=' expr ';'					{ $$ = opr(1,'=', 2 , id($1, $2, true), $4); }
+	| types ID ';'						{ $$ = id($1, $2, false); } 
+	| ID '=' expr ';'					{ $$ = opr(1,'=', 2 , id(-1,$1,true), $3); }
+	| CONST types ID '=' expr ';'				{ $$ = opr(1,'=', 2 , id($2, $3, true), $5); }
+	
+	| WHILE '(' expr ')' b stmt '}'			{ if(curr_sym->Prev != NULL){curr_sym = curr_sym->Prev;} $$ = opr(1,WHILE, 2, $3, $6); }
+	| DO b stmt_list '}' WHILE '(' expr ')'  	{ if(curr_sym->Prev != NULL){curr_sym = curr_sym->Prev;} $$ = opr(1,DO,2,$3,$7); }
+	| IF '(' expr ')' stmt %prec IFX 		{ $$ = opr(1,IF, 2, $3, $5); }
+	| IF '(' expr ')' stmt ELSE stmt		{ $$ = opr(1,IF, 3, $3, $5, $7); }
+	
+	| FOR '(' stmt  expr ';' stmt ')' b stmt '}' 	{ if(curr_sym->Prev != NULL){curr_sym = curr_sym->Prev;} $$ = opr(1,FOR,4,$3,$4,$6,$9); }
+	| SWITCH ID '{' stmt_case '}'		 	{ $$ = opr(1,SWITCH , 3,id(-1,$2,true),$2, $4); }	
+	| b stmt_list '}'		 		{ if(curr_sym->Prev != NULL){curr_sym = curr_sym->Prev;}  $$ = $2; }
 	;
 
 stmt_case:
-	 CASE expr '{' stmt '}' 	    { $$ = opr(1,CASE,2,$2,$4); }
-	| CASE expr '{' stmt '}' stmt_case  { $$ = opr(1,CASE,3,$2,$4,$6); }
+	 CASE expr b stmt_list '}' 	    	{if(curr_sym->Prev != NULL){curr_sym = curr_sym->Prev;} $$ = opr(1,CASE2,2,$2,$4); }
+	| CASE expr b stmt_list '}' stmt_case  	{if(curr_sym->Prev != NULL){curr_sym = curr_sym->Prev;} $$ = opr(1,CASE,3,$2,$4,$6); }
 	;
 
 stmt_list:	
@@ -177,7 +189,6 @@ nodeType *con(char t, conValue v) {
 	return p;
 }
 
-
 nodeType *id(int idtype, char* name, bool init) {	
 	nodeType *p;
 
@@ -189,43 +200,82 @@ nodeType *id(int idtype, char* name, bool init) {
 	p->type = typeId;
 	p->id.name = name;	
 
+	if(newSymNeeded){
+		newScope(curr_sym);
+		curr_sym = &sym_vec[sym_vec.size()-1]; 
+		newSymNeeded = false;
+	}
+
 	//Search for an existing node
-	SymbTableNode* node = sym.Search(p->id.name);
+	SymbTableNode* node = curr_sym->Search(p->id.name);
 
 	if(init && (idtype!=-1))	//int x = 3;
 		{
-		 if(node != NULL)	{ errmsg = strcat("redeclaration of variable :",name); yyerror(errmsg);}
-		 else   {sym.Insert(p->id.name,idtype,1);}
+		 if(node != NULL)	{senderror("redeclaration of variable :",name);}
+		 else   {curr_sym->Insert(p->id.name,idtype,1);}
 		}
 
 	else if(!init)		
 		{ 
 		 if(idtype!=-1)		//int x;
 		 {	
-		 	if(node != NULL) {yyerror("redeclaration of variable");}
-			else 	{sym.Insert(p->id.name,idtype,0);}
+		 	if(node != NULL) {senderror("redeclaration of variable :",name);}
+			else 	{curr_sym->Insert(p->id.name,idtype,0);}
 		 }
 		 else	
 		 {			//x as an operand
-			if(node == NULL) {yyerror("was not declared in this scope");}
+			if(node == NULL) {
+					if(curr_sym->Prev == NULL){
+						{senderror("variable was not declared in this scope",name);}
+					}
+					else{
+						symboltable *tmp = curr_sym;
+						while(curr_sym->Prev != NULL){
+							curr_sym = curr_sym->Prev;
+							node = curr_sym->Search(p->id.name);
+							if (node != NULL){
+								node->used = true;
+								break;
+							}
+						}
+						if(node == NULL) {senderror("variable was not declared in this scope",name);}
+						curr_sym = tmp;
+					}
+
+					
+				}
 			else    {node->used = true;}
 
-			if(node->assig == false)	{yyerror("variable used before initialization");}
+			if(node->assig == false)	{senderror("variable used before initialization",name);}
 		 }
 		}
 	else 				//x = 3;
 		{
-		 if(node == NULL)	{yyerror("was not declared in this scope");}
+		 if(node == NULL)	{
+		 	if(curr_sym->Prev == NULL){
+						{senderror("variable was not declared in this scope",name);}
+					}
+					else{
+						symboltable *tmp = curr_sym;
+						while(curr_sym->Prev != NULL){
+							curr_sym = curr_sym->Prev;
+							node = curr_sym->Search(p->id.name);
+							if (node != NULL){
+								node->assig = true;
+								break;
+							}
+						}
+						if(node == NULL) {senderror("variable was not declared in this scope",name);}
+						curr_sym = tmp;
+					}
+		 }
 		 else 	{node->assig = true;}
 		}
-
-	//sym.showSymbolTable(); 
-	cout<<endl;
+	//curr_sym->showSymbolTable(); 
 	//sym.showUnsedVars();
-	
-
 	return p;
 }
+
 
 nodeType *opr(int oper_type, int oper, int nops ...) {
 	va_list ap;
@@ -287,7 +337,18 @@ nodeType *opr(int oper_type, int oper, int nops ...) {
 
 			case typeId:{
 					//Search for an existing node
-					SymbTableNode* node = sym.Search(p->opr.op[i]->id.name);
+					SymbTableNode* node = curr_sym->Search(p->opr.op[i]->id.name);
+					if(node == NULL ){
+						symboltable *tmp = curr_sym;
+						while(curr_sym->Prev != NULL){
+							curr_sym = curr_sym->Prev;
+							node = curr_sym->Search(p->opr.op[i]->id.name);
+							if (node != NULL)
+								break;
+						}
+						curr_sym = tmp;
+					}
+
 					if(node->type == 2) //bool
 						all_nums = false;
 					else if (node->type == 3){ //char
@@ -327,25 +388,31 @@ nodeType *opr(int oper_type, int oper, int nops ...) {
 
 	/* SEMANTIC CHECKS */
 
-	if(oper_type == 0 && !all_nums)		yyerror("operator doesn't match this kind of operand, expected num");
-	if(oper != EQ && oper_type == 2 && !all_bool) 	yyerror("operator doesn't match this kind of operand, expected bool");
+	if(oper_type == 0 && !all_nums)		senderror("operator doesn't match this kind of operand, expected num"," ");
+	if(oper != EQ && oper_type == 2 && !all_bool) 	senderror("operator doesn't match this kind of operand, expected bool"," ");
 
 	
 	if((oper=='=') || (oper==EQ)){
 		if(first_type != second_type)
-			yyerror("operands types dont match");
-		cout<<first_name;
+			senderror("operands types dont match"," ");
 	}
 
 
-	if(oper == IF){
-		if(first_type != 2)
-			yyerror("condition of IF statement should be boolean");
-	}
+	//if(oper == IF){
+	//	if(first_type != 2)
+		//	senderror("condition of IF statement should be boolean"," ");
+	//}
 
 	va_end(ap);
 	
 	return p;
+}
+
+void newScope(symboltable *old){
+	symboltable tmp;
+	tmp.Prev = old;
+	old->Next = &tmp;
+	sym_vec.push_back(tmp);
 }
 
 void freeNode(nodeType *p) {
@@ -361,8 +428,10 @@ void freeNode(nodeType *p) {
 
 int main(int, char**) {
 	
-	/*// open a file handle to a particular file:
-	FILE *myfile = fopen("in.txt", "r");
+	// open a file handle to a particular file:
+	myfile = fopen("in.txt", "r");
+	outfile = fopen("out.txt", "w");
+
 	// make sure it is valid:
 	if (!myfile) {
 		cout << "I can't open file!" << endl;
@@ -376,15 +445,23 @@ int main(int, char**) {
 		yyparse();
 	} while (!feof(yyin));
 	
-	*/
 	
-	return yyparse();
+	fclose(myfile);
+	fclose(outfile);
+
+	//return yyparse();
 	
 }
 
-/*type = 1 for errors , 0 for warnings */
+void senderror(const char*s , const char* x){
+
+	cout << "error line " << yylineno << ": " << s << " " << x <<endl;
+	//exit(-1);
+
+}
+
 void yyerror(const char *s) {
-	cout << "parse error!  line" << yylineno << ":" << s << endl;
+	cout << "parse error!  line" << yylineno << endl;
 	// might as well halt now:
 	//	exit(-1);
 }
