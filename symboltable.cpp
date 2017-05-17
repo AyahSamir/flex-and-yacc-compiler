@@ -9,8 +9,9 @@ struct SymbTableNode
 {
 	/* data */
 	string name;
-	string type;
+	int type;	/*type of constants : INT:0 , FLOAT:1 , BOOL:2 , CHAR:3 */
 	bool assig;
+	bool used; 
 	struct SymbTableNode * Next;
 };
 
@@ -35,29 +36,29 @@ public:
 		}
 		return key%SIZE;
 	}
-	void Insert(string name , string type, bool assg){
+
+	void Insert(string name , int type, bool assg){
 		int key = Hash(name);
 		if(Nodes[key] == NULL ){
 			Nodes[key] = new SymbTableNode();
 			Nodes[key]->name = name;
 			Nodes[key]->type = type;
 			Nodes[key]->assig = assg;
+			Nodes[key]->used = false;
 			Nodes[key]->Next = NULL;
 		}else{
 			SymbTableNode *newNode = new SymbTableNode();
 			newNode->name = name;
 			newNode->type = type; 
-			Nodes[key]->assig = assg;
+			newNode->assig = assg;
+			newNode->used = false;
 			newNode->Next = Nodes[key];
 			Nodes[key] = newNode;
 		}
+		
+
 	}
-	/*sets the identifier assigned boolean to true*/
-	void SetAssigned(string name){
-		SymbTableNode* temp = Search(name);
-		temp->assig = true;
-	}
-	int Delete(string name ,string type){
+	int Delete(string name ,int type){
 		int key = Hash(name);
 		if(Nodes[key] == NULL){
 			cout<<"Node not found\n";
@@ -85,33 +86,51 @@ public:
 	SymbTableNode* Search(string name){
 		int key  = Hash(name);
 		SymbTableNode* temp = Nodes[key];
+		if (temp == NULL){
+			return NULL;
+		}
+
 		while(temp->name!=name && temp->Next != NULL)
 			temp=temp->Next;
+
 		if(temp->name == name){
 			return temp;
 		}
 		else{
-			cout<<"Not Found\n";
+			cout<<"Not Found "<<name<<endl;
 			return NULL;
 		}
 	}
 	void showSymbolTable(){
+	    cout<<"->[ var name | var type | var assigned | var used ]\n";
 	    // Implement
 	    for(int i = 0; i < SIZE; ++i){
 	        cout<<i<<": ";
 
 	        // Do not modify the head
 	        SymbTableNode* temp = Nodes[i];
-
 	        while( temp != NULL ){
-	            cout<<"->[ "<<temp->name<<" | "<<temp->type<<" | " <<temp->assig<< "]\n";
+	            cout<<"->[ "<<temp->name<<" | "<<temp->type<<" | " <<temp->assig<< " | " <<temp->used<< "]\n";
 				temp = temp->Next;
 	        }
 
 	        cout<<endl;
 	    }
 	}
+	void showUnsedVars(){
 
+	    // Implement
+	    for(int i = 0; i < SIZE; ++i){
+	        // Do not modify the head
+	        SymbTableNode* temp = Nodes[i];
+	        while( temp != NULL ){
+	            if(temp->used == 0)
+			cout<<" variable "<<temp->name<<" declared but never used"<<endl;
+			temp = temp->Next;
+	        }
+
+	    }
+	}
 };
 
 /*int main(){

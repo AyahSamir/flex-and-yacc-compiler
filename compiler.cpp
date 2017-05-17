@@ -7,11 +7,21 @@ int ex(nodeType *p) {
 
 	if (!p) return 0;
 	switch(p->type) {
-	case typeConInt:
-		printf("\tpush\t%d\n", p->con.value);
-		break;
-	case typeConFlt:
-		printf("\tpush\t%f\n", p->fcon.value);
+	case typeCon:
+		switch(p->con.value.type) {
+		case typeInt:
+			printf("\tpush\t%d\n", p->con.value.i); 
+			break;
+		case typeFlt:
+			printf("\tpush\t%f\n", p->con.value.f);
+			break;
+		case typeChar:
+			printf("\tpush\t%c\n", p->con.value.c); 
+			break;
+		case typeBool:
+			printf("\tpush\t%d\n", p->con.value.b); 
+			break;
+		}
 		break;
 	case typeId:
 		printf("\tpush\t%s\n", p->id.name);
@@ -55,6 +65,41 @@ int ex(nodeType *p) {
 			ex(p->opr.op[0]);
 			printf("\tneg\n");
 			break;
+		case '!':
+			ex(p->opr.op[0]);
+			printf("\tnot\n"); break;
+		case FOR:
+			//printf("lesa msh sh8ala");
+			ex(p->opr.op[0]);
+			ex(p->opr.op[1]);
+			printf("\tjz\tL%03d\n",lbl2 + 1 );
+			printf("L%03d:\n", lbl2);
+			ex(p->opr.op[3]);
+			ex(p->opr.op[1]);
+			printf("\tjnz\tL%03d\n",lbl2 );
+			printf("L%03d:\n",lbl2 + 1);
+			break;
+		case DO:
+			printf("L%03d:\n", lbl1 = lbl++);
+			ex(p->opr.op[0]);
+			ex(p->opr.op[1]);
+			printf("\tjz\tL%03d\n", lbl2 = lbl++);
+			printf("\tjmp\tL%03d\n", lbl1);
+			printf("L%03d:\n", lbl2);
+			break;
+		case SWITCH:
+			printf("\tmov\t%d,W\n",p->opr.op[0]->con.value.i);
+			ex(p->opr.op[1]);
+			break;
+		case CASE:
+			printf("inside CASE \n");
+			printf("\tmov\t%d,X\n",p->opr.op[0]->con.value.i);
+			printf("\txor\tX,W\n");
+			printf("\tjnz\tL%03d\n", lbl2 = lbl++);
+			ex(p->opr.op[1]);
+			printf("L%03d:\n", lbl2);
+			ex(p->opr.op[2]);
+			break;
 		default:
 			ex(p->opr.op[0]);
 			ex(p->opr.op[1]);
@@ -79,6 +124,10 @@ int ex(nodeType *p) {
 			printf("\tcompNE\n"); break;
 			case EQ:
 			printf("\tcompEQ\n"); break;
+			case AND:
+			printf("\tand\n"); break;
+			case OR:
+			printf("\tor\n"); break;
 			}
 		}
 	}
