@@ -118,6 +118,8 @@ stmt:
 	| FOR '(' stmt  expr ';' stmt ')' b stmt '}' 	{ if(curr_sym->Prev != NULL){curr_sym = curr_sym->Prev;} $$ = opr(1,FOR,4,$3,$4,$6,$9); }
 	| SWITCH ID '{' stmt_case '}'		 	{ $$ = opr(1,SWITCH , 3,id(-1,$2,true),$2, $4); }	
 	| b stmt_list '}'		 		{ if(curr_sym->Prev != NULL){curr_sym = curr_sym->Prev;}  $$ = $2; }
+	| error ';'					{ }
+        | error '}'					{ }
 	;
 
 stmt_case:
@@ -456,12 +458,12 @@ int main(int, char**) {
 void senderror(const char*s , const char* x){
 
 	cout << "error line " << yylineno << ": " << s << " " << x <<endl;
-	//exit(-1);
+	exit(-1);
 
 }
 
 void yyerror(const char *s) {
-	cout << "parse error!  line" << yylineno << endl;
+	cout << "parse error!  line " <<yylineno <<": "<< s<< endl
 	// might as well halt now:
-	//	exit(-1);
+		exit(-1);
 }
