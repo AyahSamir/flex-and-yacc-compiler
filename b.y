@@ -14,7 +14,7 @@ using namespace std;
 // stuff from flex that bison needs to know about:
 extern int yylex();
 extern int yyparse();
-extern int yylineno();
+extern int yylineno;
 extern FILE *yyin;
 
 /* prototypes */

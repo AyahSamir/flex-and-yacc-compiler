@@ -32,5 +32,4 @@ L001:
 	compLT
 	jnz	L002
 L000:
-	push	1
-	pop	ss
+	push	ss

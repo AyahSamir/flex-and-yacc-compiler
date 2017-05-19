@@ -18,7 +18,7 @@
 %}
 Digit           [0-9]
 Letter          [a-zA-Z]
-
+WS				[ \t\v\n\f]
 %%
 
 int|INT 						{ yylval.ivalue = 0; return INT; }
@@ -74,7 +74,9 @@ false|FALSE						{
 "=="							return EQ;	
 "!="							return NE;
 [ \t]+							; /*ignore white spaces*/
-[\n]							yylineno++; 
+{WS}							{ if( yytext == "\n" )
+									yylineno++; 
+									 } 
 "&&"							return AND;
 "||"							return OR;
 .							printf("error\n");

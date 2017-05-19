@@ -105,7 +105,7 @@ int ex(nodeType *p,string var) {
 			break;
 		case CASE2:
 			fprintf(outfile,"\tmov\t%s",var.c_str());
-			fprintf(outfile, ",switch_var\n");
+			fprintf(outfile, ",switch_var\n");	
 			fprintf(outfile,"\tmov\t%d,case_var\n",p->opr.op[0]->con.value.i);
 			fprintf(outfile,"\txor\tcase_var,switch_var\n");
 			fprintf(outfile,"\tjnz\tL%03d\n", lbl2 = lbl++);
