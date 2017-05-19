@@ -52,7 +52,7 @@ int ex(nodeType *p,string var) {
 				/* if */
 				fprintf(outfile,"\tjz\tL%03d\n", lbl1 = lbl++);
 				ex(p->opr.op[1],"");
-				fprintf(outfile,"L%03d\n",lbl1);				
+				fprintf(outfile,"L%03d\n",lbl2);				
 			}
 			break;
 		case PRINT:
@@ -71,16 +71,15 @@ int ex(nodeType *p,string var) {
 			ex(p->opr.op[0],"");
 			fprintf(outfile,"\tnot\n"); break;
 		case FOR:
-			//printf("lesa msh sh8ala");
 			ex(p->opr.op[0],"");
 			ex(p->opr.op[1],"");
-			fprintf(outfile,"\tjz\tL%03d\n",lbl + 1 );
+			fprintf(outfile,"\tjz\tL%03d\n",lbl1=lbl++);
 			fprintf(outfile,"L%03d:\n", lbl);
 			ex(p->opr.op[3],"");
 			ex(p->opr.op[2],""); 
 			ex(p->opr.op[1],"");
 			fprintf(outfile,"\tjnz\tL%03d\n",lbl );
-			fprintf(outfile,"L%03d:\n",lbl + 1);
+			fprintf(outfile,"L%03d:\n",lbl1);
 			break;
 		case DO:
 			fprintf(outfile,"L%03d:\n", lbl1 = lbl++);
@@ -94,7 +93,8 @@ int ex(nodeType *p,string var) {
 			ex(p->opr.op[2],p->opr.op[0]->id.name);
 			break;
 		case CASE:
-			//fprintf(outfile,"\tmov\t",var,",switch_var\n");
+			fprintf(outfile,"\tmov\t%s",var.c_str());
+			fprintf(outfile, ",switch_var\n");
 			fprintf(outfile,"\tmov\t%d,case_var\n",p->opr.op[0]->con.value.i);
 			fprintf(outfile,"\txor\tcase_var,switch_var\n");
 			fprintf(outfile,"\tjnz\tL%03d\n", lbl2 = lbl++);
@@ -104,7 +104,8 @@ int ex(nodeType *p,string var) {
 				ex(p->opr.op[2],var);
 			break;
 		case CASE2:
-			//fprintf(outfile,"\tmov\t",var,",switch_var\n");
+			fprintf(outfile,"\tmov\t%s",var.c_str());
+			fprintf(outfile, ",switch_var\n");
 			fprintf(outfile,"\tmov\t%d,case_var\n",p->opr.op[0]->con.value.i);
 			fprintf(outfile,"\txor\tcase_var,switch_var\n");
 			fprintf(outfile,"\tjnz\tL%03d\n", lbl2 = lbl++);

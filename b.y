@@ -21,7 +21,7 @@ extern FILE *yyin;
 nodeType *opr(int type, int oper, int nops, ...);	/* type of operands: NUMBERS:0, OTHERS:1, BOOL:2 */
 nodeType *id(int type,char* name, bool dec);
 nodeType *con(char t, conValue value);
-
+void showSymTable();
 void freeNode(nodeType *p);
 int ex(nodeType *p,string var);
 void newScope(symboltable *old);
@@ -90,7 +90,7 @@ FILE *outfile;
 
 %%
 program:
-	function			{ exit(0); }
+	function			{ showSymTable(); exit(0);  }
 	;
 
 function:
@@ -110,12 +110,12 @@ stmt:
 	| ID '=' expr ';'					{ $$ = opr(1,'=', 2 , id(-1,$1,true), $3); }
 	| CONST types ID '=' expr ';'				{ $$ = opr(1,'=', 2 , id($2, $3, true), $5); }
 	
-	| WHILE '(' expr ')' b stmt '}'			{ if(curr_sym->Prev != NULL){curr_sym = curr_sym->Prev;} $$ = opr(1,WHILE, 2, $3, $6); }
+	| WHILE '(' expr ')' b stmt_list '}'			{ if(curr_sym->Prev != NULL){curr_sym = curr_sym->Prev;} $$ = opr(1,WHILE, 2, $3, $6); }
 	| DO b stmt_list '}' WHILE '(' expr ')'  	{ if(curr_sym->Prev != NULL){curr_sym = curr_sym->Prev;} $$ = opr(1,DO,2,$3,$7); }
 	| IF '(' expr ')' stmt %prec IFX 		{ $$ = opr(1,IF, 2, $3, $5); }
 	| IF '(' expr ')' stmt ELSE stmt		{ $$ = opr(1,IF, 3, $3, $5, $7); }
 	
-	| FOR '(' stmt  expr ';' stmt ')' b stmt '}' 	{ if(curr_sym->Prev != NULL){curr_sym = curr_sym->Prev;} $$ = opr(1,FOR,4,$3,$4,$6,$9); }
+	| FOR '(' stmt  expr ';' stmt ')' b stmt_list '}' 	{ if(curr_sym->Prev != NULL){curr_sym = curr_sym->Prev;} $$ = opr(1,FOR,4,$3,$4,$6,$9); }
 	| SWITCH ID '{' stmt_case '}'		 	{ $$ = opr(1,SWITCH , 3,id(-1,$2,true),$2, $4); }	
 	| b stmt_list '}'		 		{ if(curr_sym->Prev != NULL){curr_sym = curr_sym->Prev;}  $$ = $2; }
 	| error ';'					{ }
@@ -427,6 +427,18 @@ void freeNode(nodeType *p) {
 	}
 	free (p);
 }
+void showSymTable(){
+	sym.showSymbolTable();
+	cout<<"=================================\n";
+	sym.showUnsedVars();
+	for(int i = 0 ; i < sym_vec.size();i++){
+		cout<<"============================================\n";
+		sym_vec[i].showSymbolTable();
+		cout<<"============================================\n";
+		sym_vec[i].showUnsedVars();
+	}
+
+}
 
 int main(int, char**) {
 	
@@ -443,14 +455,25 @@ int main(int, char**) {
 	yyin = myfile;
 	
 	// parse through the input until there is no more:
-	do {
-		yyparse();
-	} while (!feof(yyin));
 	
-	
+	yyparse();
+	 
+	 if(!yyparse())
+		printf("\nParsing complete\n");
+	else
+		printf("\nParsing failed\n");
+
+		cout<<"lllllllllllllllll\n";
+		showSymTable();
+	//} while (!feof(yyin));
+
+//	cout<<"lllllllllllllllll\n";
+	showSymTable();
+
+
 	fclose(myfile);
 	fclose(outfile);
-
+	
 	//return yyparse();
 	
 }
@@ -463,7 +486,7 @@ void senderror(const char*s , const char* x){
 }
 
 void yyerror(const char *s) {
-	cout << "parse error!  line " <<yylineno <<": "<< s<< endl
+	cout << "parse error!  line " <<yylineno <<": "<< s<< endl;
 	// might as well halt now:
 		exit(-1);
 }

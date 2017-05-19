@@ -1,6 +1,7 @@
 
 
 %option nounput yylineno
+%option noyywrap
 %{
 	#include <iostream>
 	#include <stdio.h>
@@ -80,7 +81,5 @@ false|FALSE						{
 \/\*.*							;
 \/\/.*							;
 \/\*(.*\n)*.*\*\/					;
+<<EOF>>                         { yyterminate(); return 0; }
 %%
-int yywrap(){
-	return 1;
-}

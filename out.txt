@@ -1,0 +1,36 @@
+	push	0
+	pop	i
+	push	i
+	push	5
+	compLT
+	jz	L000
+L001:
+	push	0
+	pop	y
+	push	y
+	push	10
+	compLT
+	jz	L001
+L002:
+	push	4
+	pop	x
+	push	y
+	push	1
+	add
+	pop	y
+	push	y
+	push	10
+	compLT
+	jnz	L002
+L001:
+	push	i
+	push	1
+	add
+	pop	i
+	push	i
+	push	5
+	compLT
+	jnz	L002
+L000:
+	push	1
+	pop	ss
