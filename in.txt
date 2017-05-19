@@ -1,7 +1,0 @@
-int
-for( int i = 0 ; i<5;i=i+1;){
-for( int y = 0 ; y<10 ; y = y+1;){
-	int x = 4;
-	}
-}
-int ss = 1;
