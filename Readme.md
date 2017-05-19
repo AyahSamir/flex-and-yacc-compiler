@@ -1,5 +1,4 @@
-#This is a simple C++ compiler using lex and yacc 
-# GUI for running it using TkInter
+#This is a simple C++ compiler using lex and yacc plus GUI for running it using TkInter
 
 ##bugs fixed so far :
 - yylineno bug fixed .
