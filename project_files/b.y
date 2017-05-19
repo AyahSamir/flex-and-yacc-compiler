@@ -39,7 +39,7 @@ void senderror(const char *s , const char*x);
 
 FILE *myfile;
 FILE *outfile;
-
+int mode = 0; //default mode does not show symbol table only debug mode (mode = 1)
 %}
 
 %union {
@@ -90,7 +90,7 @@ FILE *outfile;
 
 %%
 program:
-	function			{ showSymTable(); exit(0);  }
+	function			{ if (mode==1) showSymTable(); exit(0);  }
 	;
 
 function:
@@ -116,7 +116,7 @@ stmt:
 	| IF '(' expr ')' stmt ELSE stmt		{ $$ = opr(1,IF, 3, $3, $5, $7); }
 	
 	| FOR '(' stmt  expr ';' stmt ')' b stmt_list '}' 	{ if(curr_sym->Prev != NULL){curr_sym = curr_sym->Prev;} $$ = opr(1,FOR,4,$3,$4,$6,$9); }
-	| SWITCH ID '{' stmt_case '}'		 	{ $$ = opr(1,SWITCH , 3,id(-1,$2,true),$2, $4); }	
+	| SWITCH ID '{' stmt_case '}'		 	{ $$ = opr(1,SWITCH , 3,id(-1,$2,false),$2, $4); }	
 	| b stmt_list '}'		 		{ if(curr_sym->Prev != NULL){curr_sym = curr_sym->Prev;}  $$ = $2; }
 	| error ';'					{ }
         | error '}'					{ }
@@ -440,11 +440,15 @@ void showSymTable(){
 
 }
 
-int main(int, char**) {
+int main(int argc, char *argv[] ) {
 	
 	// open a file handle to a particular file:
-	myfile = fopen("in.txt", "r");
+	myfile = fopen(argv[1], "r");
 	outfile = fopen("out.txt", "w");
+
+	if(argc > 2) {
+		 mode = 1;
+		 cout<<mode<<endl; }
 
 	// make sure it is valid:
 	if (!myfile) {
@@ -464,11 +468,11 @@ int main(int, char**) {
 		printf("\nParsing failed\n");
 
 		cout<<"lllllllllllllllll\n";
-		showSymTable();
+//		showSymTable();
 	//} while (!feof(yyin));
 
 //	cout<<"lllllllllllllllll\n";
-	showSymTable();
+//	showSymTable();
 
 
 	fclose(myfile);

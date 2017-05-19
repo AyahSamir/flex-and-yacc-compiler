@@ -104,7 +104,7 @@ void senderror(const char *s , const char*x);
 
 FILE *myfile;
 FILE *outfile;
-
+int mode = 0; //default mode does not show symbol table only debug mode (mode = 1)
 
 #line 110 "y.tab.c" /* yacc.c:339  */
 
@@ -1447,7 +1447,7 @@ yyreduce:
     {
         case 2:
 #line 93 "b.y" /* yacc.c:1646  */
-    { showSymTable(); exit(0);  }
+    { if (mode==1) showSymTable(); exit(0);  }
 #line 1452 "y.tab.c" /* yacc.c:1646  */
     break;
 
@@ -1531,7 +1531,7 @@ yyreduce:
 
   case 17:
 #line 119 "b.y" /* yacc.c:1646  */
-    { (yyval.nPtr) = opr(1,SWITCH , 3,id(-1,(yyvsp[-3].sval),true),(yyvsp[-3].sval), (yyvsp[-1].nPtr)); }
+    { (yyval.nPtr) = opr(1,SWITCH , 3,id(-1,(yyvsp[-3].sval),false),(yyvsp[-3].sval), (yyvsp[-1].nPtr)); }
 #line 1536 "y.tab.c" /* yacc.c:1646  */
     break;
 
@@ -2233,11 +2233,15 @@ void showSymTable(){
 
 }
 
-int main(int, char**) {
+int main(int argc, char *argv[] ) {
 	
 	// open a file handle to a particular file:
-	myfile = fopen("in.txt", "r");
+	myfile = fopen(argv[1], "r");
 	outfile = fopen("out.txt", "w");
+
+	if(argc > 2) {
+		 mode = 1;
+		 cout<<mode<<endl; }
 
 	// make sure it is valid:
 	if (!myfile) {
@@ -2257,11 +2261,11 @@ int main(int, char**) {
 		printf("\nParsing failed\n");
 
 		cout<<"lllllllllllllllll\n";
-		showSymTable();
+//		showSymTable();
 	//} while (!feof(yyin));
 
 //	cout<<"lllllllllllllllll\n";
-	showSymTable();
+//	showSymTable();
 
 
 	fclose(myfile);

@@ -30,18 +30,17 @@ class Application(Frame):
             self.master.title(" Casper ")
             ##defining some reserved words
             self.reserved_words = [
-                'int ', 'INT ', 'float ', 'FLOAT ', 'bool ', ' BOOL ', 'char ', 'CHAR ', 'print', 'PRINT', ' break', ' BREAK', ' continue', ' CONTINUE',
-                ' switch', ' SWITCH', 'void', 'VOID', ' if', 'IF', ' else', ' ELSE', 'while', 'WHILE' ,
-                'for', 'FOR', ' do', 'DO ', ' function ', ' FUNCTION ', 'SWITCH', 'switch', 'case', 'CASE'
+                'int ', 'INT ', 'float ', 'FLOAT', 'bool ', 'BOOL ', 'char ', 'CHAR ', 'print', 'PRINT', 'break',
+                'BREAK', 'continue', 'CONTINUE', 'switch ', 'SWITCH ', 'void ', 'VOID ', 'if', 'IF', 'else', 'ELSE',
+                'while', 'WHILE', 'for', 'FOR', 'do', 'DO', 'function ', 'FUNCTION ',  'case ', 'CASE '
             ]
-            self.special_characters = ['\r', '\n', '\t', '\b', "\0", "\f", "\v"]
-            #self.numbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+            self.special_characters = []
             self.createWidgets()
 
     def _search(self,  tag=None, keyword=None,):
         pos = '1.0'
         while True:
-            if tag is 'number' or 'string':
+            if tag is 'number' or 'string'or 'char':
                 count = IntVar()
                 if tag is 'number':
                     keyword = r'\y[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?\y'
@@ -52,7 +51,7 @@ class Application(Frame):
                 idx = self.textdisplay.search(keyword, pos, END, count=count, regexp=True)
                 pos = '{}+{}c'.format(idx,count.get())
 
-            else:
+            elif tag is 'special_char' or 'reserved_word':
                 idx = self.textdisplay.search(keyword, pos, END)
                 pos = '{}+{}c'.format(idx, len(keyword))
 
@@ -86,8 +85,11 @@ class Application(Frame):
         self.btnframe.pack(fill=X,padx=10, pady=10)
 
         self.txtframe = Frame(self.master, bd=5, relief=GROOVE)
+        self.textscroll = Scrollbar(self.txtframe)
         self.textdisplay = Text(self.txtframe, height=35)
-        self.textdisplay.configure(background='#D3D3D3', foreground="#000000", font="12")
+        self.textdisplay.configure(background='#D3D3D3', foreground="#000000", font="12", yscrollcommand=self.textscroll.set)
+        self.textscroll.pack(side=RIGHT, fill=Y)
+        self.textscroll.config(command=self.textdisplay.yview)
         self.textdisplay.pack(expand=True, fill="both")
         ##define some tags for highlighting specific text
         self.textdisplay.tag_config('reserved_word', foreground='red')
@@ -95,21 +97,23 @@ class Application(Frame):
         self.textdisplay.tag_config('number', foreground='#800080')
         self.textdisplay.tag_config('string', foreground='green')
         self.textdisplay.tag_config('char', foreground='#000FFF')
+        self.textdisplay.bind("<KeyRelease>", self._highlight)
         self.txtframe.pack(fill=X,padx=10, pady=10)
 
 
         ##And now a terminal like window for displaying results
         self.consoleframe = Frame(self.master, bd=2, relief=SUNKEN)
+        self.consolescroll = Scrollbar(self.consoleframe)
         self.console = Text(self.consoleframe)
-        self.console.configure(background='#000000', foreground="#00FF00", font="10")
+        self.console.configure(background='#000000', foreground="#00FF00", font="10", yscrollcommand=self.consolescroll.set)
+        self.consolescroll.pack(side=RIGHT, fill=Y)
+        self.consolescroll.config(command=self.console.yview)
         self.console.pack(expand=True, fill="both")
         self.console.insert("end", " Casper > Hello ! let me help you compile what you want! \n")
         self.console.configure(state="disabled")
         self.consoleframe.pack(fill=X,padx=10, pady=10)
 
-        #myvar = StringVar()
-        #myvar.set('')
-        #myvar.trace('w', self._highlight)
+
 
     ##callback associated with openBtn
     def openfile(self):
@@ -134,15 +138,13 @@ class Application(Frame):
         self.console.configure(state="disabled")
         self.console.see("end")
 
-    def debug(self):
-        pass
     def _display_file(self):
         f = open(self.filename)
         self.textdisplay.insert(1.0, f.read())
         self._highlight()
 
 
-    def _highlight(self):
+    def _highlight(self, evt=None):
         for k in self.reserved_words:
             self._search('reserved_word', k)
         for c in self.special_characters:
@@ -187,25 +189,46 @@ class Application(Frame):
         captures the ouput of the process and displays it on our terminal
         """
         if self.filename is None:
+            self.savefile()
+        proc = subprocess.Popen([self.exe_path, self.filename],  stdout=subprocess.PIPE).communicate()[0]
+        output = proc.decode("utf-8")
+        if output is '':
             self.console.configure(state="normal")
-            self.console.insert("end", " Casper > Please open a file or save the file you are working on \n")
+            self.console.insert("end", " Casper > {} compiled Successfully. output file can be found at:{}/out.txt\n".format(self.filename,self.current_dir))
+            self.console.configure(state="disabled")
+            self.console.see("end")
+        else:
+            subprocess.call(["rm", "out.txt"]) # delete quadraples file it's of no use
+            self.console.configure(state="normal")
+            self.console.insert("end", " Casper > Oops ! {}  while compiling {} \n".format(output, self.filename))
+            self.console.configure(state="disabled")
+            self.console.see("end")
+
+    def debug(self):
+        """
+        this function is similar to compile but in addition shows the symbol table of each variable 
+        and whether it was used or not
+        """
+        if self.filename is None:
+            self.savefile()
+
+        proc = subprocess.Popen([self.exe_path, self.filename, "D"], stdout=subprocess.PIPE).communicate()[0]
+        output = proc.decode("utf-8")
+        if 'parse error' in output:
+            subprocess.call(["rm", "out.txt"])  # delete quadraples file it's of no use
+            self.console.configure(state="normal")
+            self.console.insert("end", " Casper > Oops ! {}  while compiling {} \n".format(output, self.filename))
             self.console.configure(state="disabled")
             self.console.see("end")
 
         else:
-            proc = subprocess.Popen([self.exe_path, self.filename],  stdout=subprocess.PIPE).communicate()[0]
-            output = proc.decode("utf-8")
-            if output is '':
-                self.console.configure(state="normal")
-                self.console.insert("end", " Casper > {} compiled Successfully. output file can be found at:{}/out.txt\n".format(self.filename,self.current_dir))
-                self.console.configure(state="disabled")
-                self.console.see("end")
-            else:
-                subprocess.call(["rm", "out.txt"]) # delete quadraples file it's of no use
-                self.console.configure(state="normal")
-                self.console.insert("end", " Casper > Oops ! {}  while compiling {} \n".format(output, self.filename))
-                self.console.configure(state="disabled")
-                self.console.see("end")
+            self.console.configure(state="normal")
+            self.console.insert("end",
+                                " Casper > {} compiled Successfully. output file can be found at:{}/out.txt\n".format(
+                                    self.filename, self.current_dir))
+            self.console.insert("end", "{}\n".format(output))
+            self.console.configure(state="disabled")
+            self.console.see("end")
 
     def close(self):
         if self.fileopen is True:
