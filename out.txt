@@ -1,0 +1,37 @@
+	push	4
+	pop	x
+	push	3
+	pop	y
+	push	x
+	push	1
+	compEQ
+	jz	L000
+	push	1
+	print
+L-1676895020
+	mov	x,switch_var
+	mov	0,case_var
+	xor	case_var,switch_var
+	jnz	L001
+	mov	y,switch_var
+	mov	5,case_var
+	xor	case_var,switch_var
+	jnz	L002
+	push	8
+	pop	e
+L002:
+	mov	y,switch_var
+	mov	4,case_var
+	xor	case_var,switch_var
+	jnz	L003
+	push	6
+	pop	f
+L003:
+L001:
+	mov	x,switch_var
+	mov	7,case_var
+	xor	case_var,switch_var
+	jnz	L004
+	push	0.350000
+	pop	p
+L004:

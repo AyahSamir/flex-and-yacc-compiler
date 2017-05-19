@@ -2241,7 +2241,7 @@ int main(int argc, char *argv[] ) {
 
 	if(argc > 2) {
 		 mode = 1;
-		 cout<<mode<<endl; }
+		 }
 
 	// make sure it is valid:
 	if (!myfile) {
